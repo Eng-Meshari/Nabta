@@ -46,14 +46,14 @@ Wiring, pin justification and power rules: **[docs/WIRING.md](docs/WIRING.md)**.
 ## Repository layout
 
 ```
-firmware/          ESP32 sketch and modules
+firmware/Nabta/    ESP32 sketch folder (name must match Nabta.ino)
   Nabta.ino        non-blocking orchestrator loop
   config.h         pins, intervals, tone table - tune here
   camera_pins.h    AI-Thinker pin map (fixed by the PCB)
   sensors.*        DHT11 reads, millis()-throttled
   buzzer.*         non-blocking tone pattern player
   cam_manager.*    camera init, capture, frame buffer release
-  network.*        Wi-Fi reconnect, multipart upload, JSON parse
+  net_manager.*    Wi-Fi reconnect, multipart upload, JSON parse
   secrets.h.example  copy to secrets.h and fill in
 server/            mock inference service
   main.py          FastAPI app, POST /api/analyze
@@ -88,12 +88,19 @@ machine running the server (not `localhost` - the ESP32 resolves it itself).
 
 ### 3. Open the sketch
 
-The Arduino IDE requires the sketch folder to match the `.ino` name. Either
-rename `firmware/` to `Nabta/`, or open it from the CLI:
+The Arduino IDE requires the sketch folder to match the `.ino` name, so the
+sketch lives in `firmware/Nabta/`. Open that folder in the IDE, or build it
+from the CLI:
 
 ```bash
-arduino-cli compile --fqbn esp32:esp32:esp32cam firmware/Nabta.ino
+arduino-cli compile --fqbn esp32:esp32:esp32cam firmware/Nabta
 ```
+
+**Do not rename `net_manager.*` back to `network.*`.** ESP32 core 3.x ships its
+own `<Network.h>`, which `WiFi.h` and `HTTPClient.h` both pull in. On
+case-insensitive filesystems (Windows, macOS) a local `network.h` in the sketch
+folder shadows it, and the build fails with broken WiFi/HTTPClient declarations
+and a spurious `redefinition of struct InferenceResult`.
 
 ### 4. Board settings
 

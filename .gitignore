@@ -75,7 +75,7 @@ Testing/
 *.elf
 
 # Local Wi-Fi + server credentials (copy from secrets.h.example)
-firmware/secrets.h
+secrets.h
 
 # Images received by the mock inference server
 server/uploads/*

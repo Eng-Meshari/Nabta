@@ -12,7 +12,7 @@
 #include "buzzer.h"
 #include "cam_manager.h"
 #include "config.h"
-#include "network.h"
+#include "net_manager.h"
 #include "sensors.h"
 
 static uint32_t lastCaptureAt = 0;
