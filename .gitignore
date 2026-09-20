@@ -67,3 +67,24 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# --- Nabta ---
+# PlatformIO / Arduino build output
+.pio/
+*.bin
+*.elf
+
+# Local Wi-Fi + server credentials (copy from secrets.h.example)
+firmware/secrets.h
+
+# Images received by the mock inference server
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+.env
+venv/
+.venv/
+env/
