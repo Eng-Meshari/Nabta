@@ -48,8 +48,11 @@ static void startPattern(const Step *steps, uint8_t length) {
   applyStep();
 }
 
+// Actively drive the line low so it never floats: a high-impedance signal pin
+// picks up Wi-Fi TX bursts and the module's driver transistor makes them audible.
 void buzzerInit() {
   pinMode(PIN_BUZZER, OUTPUT);
+  digitalWrite(PIN_BUZZER, LOW);
   noTone(PIN_BUZZER);
 }
 

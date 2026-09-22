@@ -11,7 +11,7 @@ flashed through an **ESP32-CAM-MB** micro-USB shield.
 | DHT11 | DATA | **GPIO 13** | Breakout boards already carry the 10 kΩ pull-up. Add one to 3V3 if you use a bare 4-pin sensor. |
 | DHT11 | GND | GND | Shared ground rail. |
 | Passive buzzer (3-pin) | VCC | 5V | Module has its own driver transistor; do not drive a bare buzzer from a GPIO. |
-| Passive buzzer | I/O (S) | **GPIO 2** | PWM signal from `tone()`. See §3 before changing this. |
+| Passive buzzer | I/O (S) | **GPIO 14** | PWM signal from `tone()`. See §3 before changing this. |
 | Passive buzzer | GND | GND | Shared ground rail. |
 | External PSU | +5V | 5V | 5V / 2A minimum. |
 | External PSU | GND | GND | Must be common with the ESP32-CAM-MB ground. |
@@ -30,30 +30,57 @@ and cannot be reused:
 | On-board flash LED | 4 |
 | UART programming | 1 (TX), 3 (RX) |
 
-What is left on the header is **GPIO 2, 4, 12, 13, 14, 15, 16** - and 4, 12,
-14, 15 all carry an SD-card function or a boot constraint. Since this prototype
-never mounts the SD card, **GPIO 2 and GPIO 13** are the two cleanest pins
-available, which is exactly what Nabta uses.
+What is left on the header is **GPIO 2, 4, 12, 13, 14, 15, 16** - and every
+one of 2, 4, 12, 13, 14, 15 doubles as a microSD line. Since this prototype
+never mounts the SD card, the deciding factors are boot straps and on-board
+loads: GPIO 2, 12 and 15 are strapping pins and GPIO 4 drives the flash LED.
+That leaves **GPIO 13 and GPIO 14** as the two cleanest pins, which is exactly
+what Nabta uses.
 
-## 3. GPIO 2 and the strapping pins
+## 3. Why GPIO 14 for the buzzer
 
-ESP32 samples four pins at reset to decide how to boot. GPIO 2 is one of them:
+The buzzer originally sat on GPIO 2 and produced an audible hiss and clicks,
+loudest while the Wi-Fi radio was transmitting. It was moved to GPIO 14 for
+four reasons.
+
+**1. GPIO 14 is not a strapping pin.** ESP32 samples four pins at reset to
+decide how to boot:
 
 | Pin | Boot role | Constraint |
 |---|---|---|
 | GPIO 0 | Boot mode select | Low = flash download, high/float = normal boot. Used by XCLK here - never load it. |
-| GPIO 2 | Must be **low or floating** at reset | Safe for outputs that idle low. |
+| GPIO 2 | Must be **low or floating** at reset | A buzzer module that pulls its input high blocks flash mode. |
 | GPIO 12 (MTDI) | Selects flash voltage | Must be **low** at reset; a high here can brick the flash interface. Avoid. |
 | GPIO 15 (MTDO) | Silences boot log when low | Usable, but noisier to debug. |
 
-GPIO 2 works for the buzzer because a 3-pin passive buzzer module idles its
-signal input low through the driver transistor's base resistor. The firmware
-also leaves the pin silent (`noTone()`) until `setup()` finishes, so nothing
-pulls it high during the reset window.
+On GPIO 2, a module that held its signal input high at reset stopped the board
+entering flash mode. GPIO 14 has no boot role, so the buzzer can no longer
+interfere with flashing.
 
-**If the board refuses to enter flash mode**, disconnect the buzzer signal wire
-before flashing and reconnect it afterwards - something on that module is
-holding GPIO 2 high at reset.
+**2. No shared on-board LED.** On DevKit-style ESP32 boards GPIO 2 drives the
+on-board blue status LED, so a buzzer on that pin shares the line with the LED
+load and its current. The AI-Thinker ESP32-CAM has no LED on GPIO 2 (its LEDs
+are the white flash on GPIO 4 and the red status LED on GPIO 33). Keeping the
+buzzer off GPIO 2 means the wiring stays valid if the firmware is moved to a
+board that does have one.
+
+**3. No SD pull-up on the line.** GPIO 2 is the microSD `DATA0` line. The SD
+specification requires pull-ups on the `CMD` and `DATA` lines, so boards with
+an SD slot typically fit one there. When the pin is released, that pull-up
+drags the buzzer input toward 3V3 and half-biases the module's driver
+transistor. GPIO 14 is the SD `CLK` line, which needs no pull-up. Trade-off:
+mounting the SD card later (in 1-bit or 4-bit mode) will clash with the buzzer
+on GPIO 14.
+
+**4. Immune to Wi-Fi RF bursts.** The radio draws ~250 mA bursts while
+transmitting, and those couple into any high-impedance trace. A signal pin
+that floats, or is held only by a pull-up, picks up the bursts, and the
+buzzer's driver transistor makes them audible. `buzzerInit()` now configures
+the pin as a push-pull `OUTPUT` driven `LOW` (plus `noTone()`), so between
+tones the line is low-impedance and RF pickup cannot bias the transistor.
+
+GPIO 14 is also JTAG `MTMS` and may emit a short burst during the ROM boot
+phase, before `setup()` runs. A brief click at reset is expected and harmless.
 
 GPIO 13 has no strapping role at all. It is `HS2_DATA3` for the SD card and
 `MTCK` for JTAG, neither of which this prototype uses, so the DHT11 owns it
@@ -84,7 +111,7 @@ outright.
         |                       |               |
      [5V] ESP32-CAM          [VCC] DHT11     [VCC] Buzzer
         |   GPIO13 <-----DATA----+               |
-        |   GPIO2  <-----I/O --------------------+
+        |   GPIO14 <-----I/O --------------------+
         |                       |               |
      [GND]--------------------[GND]-----------[GND]   <-- common ground
         |
@@ -99,4 +126,5 @@ outright.
    supplies data and serial, not the current budget.
 3. Press **RST** on the shield if the upload does not start - the MB shield
    auto-toggles boot mode, but a marginal supply can miss the handshake.
-4. If uploads still fail, temporarily unplug the buzzer signal wire (see §3).
+4. The buzzer on GPIO 14 has no boot role (see §3), so if uploads still fail,
+   look at the supply and the shield, not the peripherals.

@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+firmware = "firmware/Nabta/build/esp32.esp32.esp32cam/Nabta.ino.bin"
+elf = "firmware/Nabta/build/esp32.esp32.esp32cam/Nabta.ino.elf"

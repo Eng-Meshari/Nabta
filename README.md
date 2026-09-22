@@ -13,7 +13,7 @@ and gives acoustic feedback from the verdict that comes back.
   +----------------------------+               +---------------------------+
   |  DHT11  -> GPIO 13         |   Wi-Fi       |  FastAPI  main.py         |
   |  OV2640 -> SVGA JPEG       |  multipart    |    POST /api/analyze      |
-  |  Buzzer -> GPIO 2          |  ==========>  |      |                    |
+  |  Buzzer -> GPIO 14         |  ==========>  |      |                    |
   |                            |               |      +-> uploads/*.jpg    |
   |  Nabta.ino (non-blocking)  |   JSON        |      +-> mock_inference   |
   |   sensors / cam / network  |  <==========  |                           |
@@ -37,9 +37,14 @@ Response contract:
 | 1 | ESP32-CAM | AI-Thinker, OV2640, 4 MB external PSRAM | PSRAM is required for SVGA capture |
 | 2 | ESP32-CAM-MB | Micro-USB programmer shield | Programming and serial monitor only |
 | 3 | DHT11 module | 3-pin breakout with on-board pull-up | Data on GPIO 13 |
-| 4 | Passive buzzer module | 3-pin, on-board driver transistor | Signal on GPIO 2 |
+| 4 | Passive buzzer module | 3-pin, on-board driver transistor | Signal on GPIO 14 |
 | 5 | Power supply | 5V, 2A minimum | Feeds the 5V/GND rail directly |
 | 6 | Jumper wires | Female-female | Common ground across all modules |
+
+The buzzer sits on **GPIO 14**, not GPIO 2: GPIO 14 is not a boot strapping
+pin, shares no on-board LED, carries no SD pull-up, and the firmware drives it
+`LOW` between tones so Wi-Fi TX bursts cannot couple into the line as audible
+noise. Full rationale in [docs/WIRING.md §3](docs/WIRING.md#3-why-gpio-14-for-the-buzzer).
 
 Wiring, pin justification and power rules: **[docs/WIRING.md](docs/WIRING.md)**.
 
@@ -113,6 +118,23 @@ and a spurious `redefinition of struct InferenceResult`.
 | CPU Frequency | 240 MHz |
 
 Then flash over the ESP32-CAM-MB shield with the external 5V supply connected.
+
+### 5. Simulation (Wokwi, optional)
+
+`wokwi.toml` and `diagram.json` at the repo root wire the ESP32-CAM to a DHT
+sensor on GPIO 13 and the buzzer on GPIO 14. Export the binaries they point at,
+then start the simulator (Wokwi for VS Code: **Wokwi: Start Simulator**):
+
+```bash
+arduino-cli compile --fqbn esp32:esp32:esp32cam --export-binaries firmware/Nabta
+```
+
+- The camera is not simulated, so boot plays the **alert tone** instead of the
+  chime. That still exercises the buzzer on GPIO 14.
+- Wokwi has no DHT11 part; the diagram uses `wokwi-dht22` (same pinout). With
+  `DHT_SENSOR_TYPE DHT11` the readings come out mis-scaled. Set it to `DHT22`
+  in `config.h` while simulating.
+- Simulated Wi-Fi is SSID `Wokwi-GUEST` with an empty password.
 
 ## Server setup
 

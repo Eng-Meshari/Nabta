@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "author": "Nabta",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-cam", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht1",
+      "top": -134.4,
+      "left": -153.6,
+      "attrs": { "temperature": "24", "humidity": "40" }
+    },
+    { "type": "wokwi-buzzer", "id": "bz1", "top": 72.7, "left": -126.3, "rotate": 270, "attrs": {} }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "dht1:VCC", "esp:5V.1", "red", [ "v38.2", "h145.8" ] ],
+    [ "dht1:GND", "esp:GND.1", "black", [ "v47.8", "h117" ] ],
+    [ "dht1:SDA", "esp:13", "green", [ "v67", "h136.3" ] ],
+    [ "bz1:2", "esp:14", "blue", [ "h19.2", "v-38.9", "h36" ] ],
+    [ "bz1:1", "esp:GND.2", "black", [ "h9.6", "v48", "h153.6", "v-116.1", "h-21.6" ] ]
+  ],
+  "dependencies": {}
+}

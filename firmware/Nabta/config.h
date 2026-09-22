@@ -4,7 +4,7 @@
 
 // ---------------------------------------------------------------- peripherals
 #define PIN_DHT_DATA            13   // DHT11 data line (free: SD_DATA3, SD unused)
-#define PIN_BUZZER               2   // Passive buzzer signal (see docs/WIRING.md)
+#define PIN_BUZZER              14   // Passive buzzer signal (see docs/WIRING.md)
 #define DHT_SENSOR_TYPE       DHT11
 
 // -------------------------------------------------------------------- timings
