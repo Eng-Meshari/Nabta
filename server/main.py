@@ -1,4 +1,4 @@
-"""Nabta mock inference server.
+"""Nabta inference server.
 
 Receives multipart uploads from the ESP32-CAM, archives the frame for visual
 verification, and answers with the payload the firmware expects.
@@ -13,18 +13,18 @@ from pathlib import Path
 
 from fastapi import FastAPI, Form, UploadFile
 
-from mock_inference import analyze
+from model_inference import analyze
 
 UPLOAD_DIR = Path(__file__).parent / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="Nabta Mock Inference Server")
+app = FastAPI(title="Nabta Inference Server")
 
 
 @app.get("/")
 def health() -> dict:
     """Liveness probe - handy for confirming the ESP32 can reach this host."""
-    return {"status": "ok", "uploads": len(list(UPLOAD_DIR.glob("*.jpg")))}
+    return {"status": "ok", "uploads": len(list(UPLOAD_DIR.glob("[0-9]*.jpg")))}
 
 
 @app.post("/api/analyze")
