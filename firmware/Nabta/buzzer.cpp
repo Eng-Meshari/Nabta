@@ -56,6 +56,11 @@ void buzzerInit() {
   noTone(PIN_BUZZER);
 }
 
+void buzzerStop() {
+  sequence = nullptr;  // so buzzerUpdate() cannot restart the pattern
+  buzzerInit();
+}
+
 void playBootChime() {
   startPattern(BOOT_CHIME, sizeof(BOOT_CHIME) / sizeof(BOOT_CHIME[0]));
 }

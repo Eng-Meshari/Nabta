@@ -3,10 +3,11 @@
  *
  * loop() owns three independent millis() timers and never blocks:
  *   - sensorsUpdate()  polls the DHT11 every DHT_POLL_INTERVAL
- *   - captureAndUpload() runs every CAPTURE_INTERVAL
+ *   - captureAndUpload() runs every CAPTURE_INTERVAL_MS
  *   - buzzerUpdate()   advances whatever tone pattern is playing
  *
- * The only bounded blocking call is the HTTP round trip inside uploadFrame().
+ * The only bounded blocking calls are the HTTP round trip inside uploadFrame()
+ * and the FLASH_SETTLE_MS flash warm-up inside captureFrame().
  */
 
 #include "buzzer.h"
@@ -26,6 +27,9 @@ static void captureAndUpload() {
     env.humidity = DHT_FALLBACK_HUMIDITY;
   }
 
+  // Silent through the flash + Wi-Fi current spike; this also covers a failed
+  // capture, since nothing restarts the buzzer before that early return.
+  buzzerStop();
   camera_fb_t *fb = captureFrame();
   if (fb == nullptr) {
     return;
@@ -67,7 +71,7 @@ void setup() {
   }
 
   // Offset the first capture so the DHT11 has produced a reading by then.
-  lastCaptureAt = millis() - CAPTURE_INTERVAL + DHT_POLL_INTERVAL;
+  lastCaptureAt = millis() - CAPTURE_INTERVAL_MS + DHT_POLL_INTERVAL;
 }
 
 void loop() {
@@ -79,7 +83,7 @@ void loop() {
     Serial.printf("[env] %.1f C / %.1f %%RH\n", env.temperature, env.humidity);
   }
 
-  if (cameraReady && wifiReady() && millis() - lastCaptureAt >= CAPTURE_INTERVAL) {
+  if (cameraReady && wifiReady() && millis() - lastCaptureAt >= CAPTURE_INTERVAL_MS) {
     lastCaptureAt = millis();
     captureAndUpload();
   }

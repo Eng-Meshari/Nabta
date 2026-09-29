@@ -6,6 +6,10 @@
 #include "config.h"
 
 bool cameraInit() {
+  // Driven low first thing so the flash LED never glows from a floating pin.
+  pinMode(FLASH_GPIO_NUM, OUTPUT);
+  digitalWrite(FLASH_GPIO_NUM, LOW);
+
   camera_config_t cfg = {};
 
   cfg.ledc_channel = LEDC_CHANNEL_0;
@@ -65,7 +69,10 @@ bool cameraInit() {
 }
 
 camera_fb_t *captureFrame() {
+  digitalWrite(FLASH_GPIO_NUM, HIGH);
+  delay(FLASH_SETTLE_MS);  // GRAB_LATEST then hands back a frame taken under the flash
   camera_fb_t *fb = esp_camera_fb_get();
+  digitalWrite(FLASH_GPIO_NUM, LOW);  // off on every path, including a failed grab
   if (fb == nullptr) {
     Serial.println("[camera] capture failed");
     return nullptr;

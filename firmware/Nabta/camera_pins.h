@@ -20,3 +20,5 @@
 #define VSYNC_GPIO_NUM    25
 #define HREF_GPIO_NUM     23
 #define PCLK_GPIO_NUM     22
+
+#define FLASH_GPIO_NUM     4  // on-board white flash LED

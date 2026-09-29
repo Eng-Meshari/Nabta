@@ -10,7 +10,8 @@
 // -------------------------------------------------------------------- timings
 #define SERIAL_BAUD_RATE     115200
 #define DHT_POLL_INTERVAL      5000  // ms between temperature/humidity samples
-#define CAPTURE_INTERVAL      30000  // ms between camera capture + upload cycles
+#define CAPTURE_INTERVAL_MS   30000  // ms between capture + upload cycles; long enough for thermal recovery
+#define FLASH_SETTLE_MS          40  // flash-on time before grabbing; kept short to spare GPIO4 and the regulator
 #define WIFI_RETRY_INTERVAL    5000  // ms between reconnect attempts
 #define HTTP_TIMEOUT_MS       15000  // upload + inference round trip budget
 #define HTTP_PING_TIMEOUT_MS   3000  // pre-flight GET budget, short so a dead link fails fast
