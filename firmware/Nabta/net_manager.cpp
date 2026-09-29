@@ -19,9 +19,19 @@ void wifiInit() {
 }
 
 void wifiUpdate() {
+  static bool announced = false;
   if (WiFi.status() == WL_CONNECTED) {
+    if (!announced) {
+      announced = true;
+      // An IP outside the server's subnet or a weak RSSI (below about -75 dBm
+      // on the ESP32-CAM PCB antenna) explains most failed uploads.
+      Serial.printf("[wifi] connected, ip=%s gateway=%s rssi=%d dBm\n",
+                    WiFi.localIP().toString().c_str(),
+                    WiFi.gatewayIP().toString().c_str(), WiFi.RSSI());
+    }
     return;
   }
+  announced = false;
   const uint32_t now = millis();
   if (now - lastRetryAt < WIFI_RETRY_INTERVAL) {
     return;
@@ -63,11 +73,35 @@ static bool parseResponse(const String &payload, InferenceResult &result) {
   return true;
 }
 
+// Cheap GET against the server's health route ("/") before the large POST, so
+// an unreachable server is reported on its own instead of as a failed upload.
+static bool pingServer() {
+  const String uploadUrl = SERVER_UPLOAD_URL;
+  // Keep scheme + host + port, i.e. everything before the first path slash.
+  const String healthUrl = uploadUrl.substring(0, uploadUrl.indexOf('/', strlen("http://"))) + "/";
+
+  HTTPClient http;
+  http.setConnectTimeout(HTTP_PING_TIMEOUT_MS);
+  http.setTimeout(HTTP_PING_TIMEOUT_MS);
+  if (!http.begin(healthUrl)) {
+    Serial.printf("[net] ping: http.begin failed for %s\n", healthUrl.c_str());
+    return false;
+  }
+
+  const int httpCode = http.GET();
+  if (httpCode != HTTP_CODE_OK) {
+    Serial.printf("[net] ping %s failed, HTTP %d %s (rssi=%d dBm)\n", healthUrl.c_str(),
+                  httpCode, http.errorToString(httpCode).c_str(), WiFi.RSSI());
+  }
+  http.end();
+  return httpCode == HTTP_CODE_OK;
+}
+
 bool uploadFrame(camera_fb_t *fb, float temperature, float humidity,
                  InferenceResult &result) {
   result = InferenceResult{};
 
-  if (fb == nullptr || !wifiReady()) {
+  if (fb == nullptr || !wifiReady() || !pingServer()) {
     return false;
   }
 
@@ -104,17 +138,19 @@ bool uploadFrame(camera_fb_t *fb, float temperature, float humidity,
   http.addHeader("Content-Type", String("multipart/form-data; boundary=") + BOUNDARY);
 
   Serial.printf("[net] POST %u bytes (image %u)\n", (unsigned)bodyLen, (unsigned)fb->len);
-  const int status = http.POST(body, bodyLen);
+  const int httpCode = http.POST(body, bodyLen);
   free(body);
 
-  bool parsed = false;
-  if (status == HTTP_CODE_OK) {
-    parsed = parseResponse(http.getString(), result);
-  } else {
-    Serial.printf("[net] upload failed, HTTP %d (%s)\n", status,
-                  http.errorToString(status).c_str());
+  // Negative codes are transport errors (no HTTP response), see the table in
+  // HTTPClient.h: -1 connect failed, -3 payload send failed, -11 read timeout.
+  const String response = http.getString();
+  Serial.printf("[net] HTTP response code: %d\n", httpCode);
+  Serial.printf("[net] HTTP response body: %s\n", response.c_str());
+  if (httpCode < 0) {
+    Serial.printf("[net] transport error: %s\n", http.errorToString(httpCode).c_str());
   }
 
+  const bool parsed = httpCode == HTTP_CODE_OK && parseResponse(response, result);
   http.end();
   return parsed;
 }

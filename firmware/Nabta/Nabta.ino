@@ -19,10 +19,11 @@ static uint32_t lastCaptureAt = 0;
 static bool cameraReady = false;
 
 static void captureAndUpload() {
-  const SensorData env = sensorsLatest();
+  SensorData env = sensorsLatest();
   if (!env.valid) {
-    Serial.println("[loop] skipping upload, no valid DHT11 reading yet");
-    return;
+    Serial.println("[loop] no valid DHT11 reading yet, uploading with fallback values");
+    env.temperature = DHT_FALLBACK_TEMPERATURE;
+    env.humidity = DHT_FALLBACK_HUMIDITY;
   }
 
   camera_fb_t *fb = captureFrame();

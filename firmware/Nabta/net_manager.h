@@ -20,6 +20,7 @@ void wifiUpdate();
 
 bool wifiReady();
 
+// Pings the server's "/" route first (bounded by HTTP_PING_TIMEOUT_MS), then
 // POSTs the JPEG frame plus temperature/humidity as multipart/form-data and
 // parses the JSON reply. Blocks for the round trip (bounded by
 // HTTP_TIMEOUT_MS). Does NOT take ownership of fb - the caller still releases it.

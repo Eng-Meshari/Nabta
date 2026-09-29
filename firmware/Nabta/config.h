@@ -13,6 +13,7 @@
 #define CAPTURE_INTERVAL      30000  // ms between camera capture + upload cycles
 #define WIFI_RETRY_INTERVAL    5000  // ms between reconnect attempts
 #define HTTP_TIMEOUT_MS       15000  // upload + inference round trip budget
+#define HTTP_PING_TIMEOUT_MS   3000  // pre-flight GET budget, short so a dead link fails fast
 
 // --------------------------------------------------------------------- camera
 #define CAMERA_FRAME_SIZE  FRAMESIZE_SVGA  // 800x600
@@ -39,3 +40,8 @@
 // ------------------------------------------------------------------ behaviour
 // Server responses whose "action_required" differs from this trigger the alarm.
 #define ACTION_NONE            "none"
+
+// Sent with the frame while the DHT11 has no valid reading yet, so a dead or
+// unplugged sensor never blocks the plant-health check.
+#define DHT_FALLBACK_TEMPERATURE  25.0f  // degrees Celsius
+#define DHT_FALLBACK_HUMIDITY     50.0f  // relative humidity, percent
